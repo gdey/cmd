@@ -142,7 +142,9 @@ func NewContext(signals ...os.Signal) *Context {
 // can be passed in as well, if no list is passed os.Interrupt, and syscall.SIGTERM is
 // assumed.
 func New(signals ...os.Signal) *Context {
-	ctx = NewContext(signals...)
+	if ctx == nil {
+		ctx = NewContext(signals...)
+	}
 	return ctx
 }
 
