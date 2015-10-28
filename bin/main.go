@@ -1,7 +1,3 @@
-# cmd
-Go library to encapsulate the signal handling pattern for termination signal so that I can properly clean up.
-
-```go
 package main
 
 import (
@@ -42,4 +38,3 @@ func main() {
 	}
 	fmt.Println("All done!")
 }
-```
