@@ -16,7 +16,8 @@ import (
 	"golang.org/x/net/context"
 )
 
-type Context struct {
+// Context is the base type that holds
+type contextType struct {
 	// The net/context context; can be useful to create sub contexts.
 	// however, it would be better to have a seperate net/context tree.
 	ctx    context.Context
@@ -27,12 +28,12 @@ type Context struct {
 	signal os.Signal
 }
 
-var ctx *Context
+var ctx *contextType
 
 // Complete is a blocking call that should be the last call in your main function.
 // The purpose of this function is to wait for the cancel go routine to cleanup
 // corretly.
-func (c *Context) Complete() {
+func (c *contextType) Complete() {
 	if c == nil {
 		return
 	}
@@ -49,7 +50,7 @@ func Complete() {
 
 // Cancelled is provided for use in select statments. It can be used to determine
 // if a termination signal has been sent.
-func (c *Context) Cancelled() <-chan struct{} {
+func (c *contextType) Cancelled() <-chan struct{} {
 	if c == nil {
 		// If we are nil, we should ctr-c can not be trapped, so we should
 		// always block.
@@ -67,7 +68,7 @@ func Cancelled() <-chan struct{} {
 // IsCancelled is provided for use in if and for blocks, this can be used to check
 // to see if a termination signal has been send, and to the excuate appropriate logic
 // as needed.
-func (c *Context) IsCancelled() bool {
+func (c *contextType) IsCancelled() bool {
 	if c == nil {
 		// If we are nil ctr-c can not be trapped, so we can not be in a
 		// cancelled stated.
@@ -88,7 +89,7 @@ func IsCancelled() bool {
 	return ctx.IsCancelled()
 }
 
-func (c *Context) signalHandler() {
+func (c *contextType) signalHandler() {
 	if c == nil {
 		return
 	}
@@ -104,7 +105,7 @@ func (c *Context) signalHandler() {
 }
 
 // Signal provides one the ability to introspect which signal was actually send.
-func (c *Context) Signal() os.Signal {
+func (c *contextType) Signal() os.Signal {
 	c.l.RLock()
 	s := c.signal
 	c.l.RUnlock()
@@ -119,7 +120,7 @@ func Signal() os.Signal {
 // NewContext initilizes and setups up the context. An explicate list of signals
 // can be passed in as well, if no list is passed os.Interrupt, and syscall.SIGTERM is
 // assumed.
-func NewContext(signals ...os.Signal) *Context {
+func NewContext(signals ...os.Signal) *contextType {
 	ch := make(chan os.Signal)
 	if len(signals) == 0 {
 		signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
@@ -127,7 +128,7 @@ func NewContext(signals ...os.Signal) *Context {
 		signal.Notify(ch, signals...)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	c := Context{
+	c := contextType{
 		ctx:    ctx,
 		cancel: cancel,
 		c:      ch,
@@ -141,7 +142,7 @@ func NewContext(signals ...os.Signal) *Context {
 // New initilizes and setups up the global context. An explicate list of signals
 // can be passed in as well, if no list is passed os.Interrupt, and syscall.SIGTERM is
 // assumed.
-func New(signals ...os.Signal) *Context {
+func New(signals ...os.Signal) *contextType {
 	if ctx == nil {
 		ctx = NewContext(signals...)
 	}
