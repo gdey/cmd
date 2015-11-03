@@ -20,32 +20,69 @@ import (
 type contextType struct {
 	// The net/context context; can be useful to create sub contexts.
 	// however, it would be better to have a seperate net/context tree.
-	ctx    context.Context
-	c      chan os.Signal
-	cancel context.CancelFunc
-	wg     sync.WaitGroup
-	l      sync.RWMutex
-	signal os.Signal
+	ctx         context.Context
+	c           chan os.Signal
+	cancel      context.CancelFunc
+	wg          sync.WaitGroup
+	l           sync.RWMutex
+	signal      os.Signal
+	fnl         sync.Mutex
+	completeFns []func() // These are functions that should be called when The context is compleated.
 }
 
 var ctx *contextType
 
+// OnComplete adds a function to be called when then complete function is about
+// to exit. If the contextType is nil, then the functions will never be called.
+// The functions will only be called if the complete function can actually be
+// called. With a nil context, the complete function never get called.
+func (c *contextType) OnComplete(fns ...func()) {
+	// if the ctx is nil, then we don't call the functions.
+	if ctx == nil {
+		return
+	}
+	c.fnl.Lock()
+	// I want to append the functions in reverse order. This is because we
+	// will be call the functions in reverse order.
+	for i := len(fns) - 1; i >= 0; i-- {
+		c.completeFns = append(c.completeFns, fns[i])
+	}
+	c.fnl.Unlock()
+}
+
+// OnComplete adds a set of functions that are called just before complete;
+// exists. The functions are called in reverse order. function passed to
+// Complete are called after functions defined by OnComplete
+func OnComplete(fns ...func()) {
+	ctx.OnComplete(fns...)
+}
+
 // Complete is a blocking call that should be the last call in your main function.
 // The purpose of this function is to wait for the cancel go routine to cleanup
 // corretly.
-func (c *contextType) Complete() {
+func (c *contextType) Complete(fns ...func()) {
 	if c == nil {
 		return
 	}
 	c.cancel()
 	c.wg.Wait()
+	// First we want to call all the functions defined by the OnComplete
+	// function, then we want to call each function passed to us.
+	// We want to call these functions in reverse order.
+	for i := len(c.completeFns) - 1; i >= 0; i-- {
+		fn := c.completeFns[i]
+		fn()
+	}
+	for _, fn := range fns {
+		fn()
+	}
 }
 
 // Complete is a blocking call that should be the last call in your main function.
 // The purpose of this function is to wait for the cancel go routine to cleanup
 // corretly.
-func Complete() {
-	ctx.Complete()
+func Complete(fns ...func()) {
+	ctx.Complete(fns...)
 }
 
 // Cancelled is provided for use in select statments. It can be used to determine

@@ -12,7 +12,14 @@ func cleanup(s string) {
 }
 
 func main() {
-	defer cmd.New().Complete()
+	defer cmd.New().Complete(
+		func() { fmt.Println("last to exit") },
+	)
+	cmd.OnComplete(
+		func() {
+			fmt.Println("First to exit")
+		},
+	)
 	// Main code here
 	fmt.Println("Runing 3 times.")
 	for i := 0; i < 3; i++ {
