@@ -8,12 +8,11 @@
 package cmd
 
 import (
+	"context"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
-
-	"golang.org/x/net/context"
 )
 
 // Context is the base type that holds
